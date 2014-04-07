@@ -218,7 +218,6 @@ class MainWindow(QtGui.QMainWindow):
 ##        #QtCore.SLOT('close()')
  
 if __name__ == '__main__':
-    setgl()
     app = QtGui.QApplication(sys.argv)
  
     mainwindow = MainWindow()

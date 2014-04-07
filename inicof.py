@@ -140,16 +140,25 @@ class DataCenterIni:
         mysqlconf['db']      = cf.get(section,'db')
         mysqlconf['charset'] = cf.get(section,'charset')
         return mysqlconf
-     
+    
+##def getTime():
+##    return datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+
 if __name__ == "__main__":
     #PATH = 'F:/卡口/imgs/ImageFile/平潭乌塘卡口/20140304/11/1(出城)/20140113164737680_蓝牌粤B9041J.ini'
     PATH2 = 'F:\\卡口\\imgs\\ImageFile\\平潭乌塘卡口\\20140304\\11\\1(出城)\\20140113164737680_蓝牌粤B9041J.ini'
     #PATH3 = 'F:\卡口\imgs\ImageFile\平潭乌塘卡口\20140304\11\test\20140113164940250_蓝牌粤LF2473.ini'
 ##    print "r'"+PATH2+"'"
     try:
-        ftpini = FtpIni()
-        ftpini.setDiskConf()
-        #s = imgIni.getPlateInfo(PATH2)
+        imgIni = ImgIni()
+        #ftpini.setDiskConf()
+        plateinfo = imgIni.getPlateInfo(PATH2)
+        direction = {'0':u'进城','1':u'出城','2':u'由东往西','3':u'由南往北','4':u'由西往东','5':u'由北往南'}
+        s = direction.get(plateinfo['directionid'],u'其他')
+        print s
+        carstr = '%s %s  %s | %s %s'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
+        #carstr = '%s  %s | %s %s'%(plateinfo['platecode'],plateinfo['platecolor'],s.encode('utf-8'),plateinfo['channelid'])
+        print carstr
         #i = s['host'].split(',')
         #print s
         #disk = s['disk'].split(',')

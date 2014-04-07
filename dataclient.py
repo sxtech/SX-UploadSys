@@ -43,7 +43,7 @@ class DataClient:
         self.ACTIVE_FOLDER = ()
         self.DIC_FILE = {}
         self.ACTIVE_TIME = datetime.datetime(2000,01,01,00,00,00)
-        self.direction = {'0':'进城','1':'出城','2':'由东往西','3':'由南往北','4':'由西往东','5':'由北往南'}
+        self.direction = {'0':u'进城','1':u'出城','2':u'由东往西','3':u'由南往北','4':u'由西往东','5':u'由北往南'}
 
         self.imgIni = ImgIni()
         mysqlconf = self.imgIni.getMysqldbConf()
@@ -204,7 +204,8 @@ class DataClient:
                     self.setErrorFile()
             if self.imgMysql.addIndex(values) == True:
                 self.DIC_FILE[(date,hour)] = new_ini
-                carstr = '[%s]  %s  %s |'%(plateinfo['passdatetime'],plateinfo['platecode'],plateinfo['platecolor']),'%s |'%self.direction.get(plateinfo['directionid'],'其他'),'%s车道'%plateinfo['channelid']
+                carstr = '%s %s %s | %s | %s车道'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
+                #print 'carstr',carstr
                 self.trigger.emit("<font %s>%s</font>"%(self.style_blue,carstr))
                 self.setState()
             else:
