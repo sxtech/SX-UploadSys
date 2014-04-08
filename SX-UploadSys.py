@@ -4,6 +4,7 @@ import sys,time,datetime
 import MySQLdb
 import logging
 import logging.handlers
+from singleinstance import singleinstance
 import gl
 
 def getTime():
@@ -24,7 +25,7 @@ def initLogging(logFilename):
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V0.1.0'
+    return 'SX-UploadSys V0.1.2'
 
  
 class MyThread(QtCore.QThread):
@@ -49,6 +50,9 @@ class dcmain:
         self.loginflag = True
         self.logincount = 0
         self.setupflag = False
+
+        self.trigger.emit("<font %s>%s</font>"%(self.style_green,'Welcome to '+version()))
+
 
     def __del__(self):
         del self.dc
@@ -75,7 +79,7 @@ class dcmain:
 ##            self.checkFlag()
 
     def comLoop(self):
-        print 'loop'
+        #print 'loop'
         try:   
             if len(self.dc.errorfile) > 0:
                 self.dc.appendIndex()
@@ -132,7 +136,7 @@ class dcmain:
 
     def mainloop(self):                    
         while True:
-            print 'count ',self.count
+            #print 'count ',self.count
             if gl.qtflag == False:
                 gl.dcflag = False
                 break
@@ -148,7 +152,7 @@ class dcmain:
                     self.logincount = 0
                     #self.checkFlag()
             else:
-                print 'self.setupflag',self.setupflag
+                #print 'self.setupflag',self.setupflag
                 if self.setupflag:
                     self.comLoop()
                 else:
@@ -218,6 +222,12 @@ class MainWindow(QtGui.QMainWindow):
 ##        #QtCore.SLOT('close()')
  
 if __name__ == '__main__':
+    myapp = singleinstance()
+    if myapp.aleradyrunning():
+        print version(),'已经启动!3秒后自动退出...'
+        time.sleep(3)
+        sys.exit(0)
+        
     app = QtGui.QApplication(sys.argv)
  
     mainwindow = MainWindow()

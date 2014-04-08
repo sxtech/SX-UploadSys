@@ -7,7 +7,7 @@ import cPickle
 import ConfigParser
 from mysqldb import ImgMysql
 from inicof import ImgIni
-from singleinstance import singleinstance
+#from singleinstance import singleinstance
 
 
 def getTime():
@@ -204,7 +204,7 @@ class DataClient:
                     self.setErrorFile()
             if self.imgMysql.addIndex(values) == True:
                 self.DIC_FILE[(date,hour)] = new_ini
-                carstr = '%s %s %s | %s | %s车道'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
+                carstr = '%s %s %s | %s | %s | %s车道'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),plateinfo['roadname'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
                 #print 'carstr',carstr
                 self.trigger.emit("<font %s>%s</font>"%(self.style_blue,carstr))
                 self.setState()
