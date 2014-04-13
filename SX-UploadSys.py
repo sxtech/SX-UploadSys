@@ -45,6 +45,7 @@ class dcmain:
         self.style_blue = 'size=4 face=arial color=blue'
         self.style_green = 'size=4 face=arial color=green'
         self.trigger = trigger
+        initLogging(r'log\dataclient.log')
         self.dc = DataClient(trigger)
         self.count = 0
         self.loginflag = True
