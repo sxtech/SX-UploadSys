@@ -1,6 +1,6 @@
 from dataclient import DataClient
 from PyQt4 import QtGui, QtCore
-import sys,time,datetime
+import sys,time,datetime,os
 import MySQLdb
 import logging
 import logging.handlers
@@ -25,7 +25,7 @@ def initLogging(logFilename):
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V0.1.2'
+    return 'SX-UploadSys V0.1.4'
 
  
 class MyThread(QtCore.QThread):
@@ -162,7 +162,7 @@ class dcmain:
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):  
         super(MainWindow, self).__init__(parent)
-        self.resize(600, 450)
+        self.resize(650, 450)
         self.setWindowTitle(version())
         
         self.text_area = QtGui.QTextBrowser()
@@ -190,6 +190,8 @@ class MainWindow(QtGui.QMainWindow):
         #self.setGeometry(300, 300, 250, 150)
         #self.setWindowTitle('Icon')
         self.setWindowIcon(QtGui.QIcon('icons/logo.png'))
+
+        self.count = 0
         
         self.start_threads()
         
@@ -200,7 +202,6 @@ class MainWindow(QtGui.QMainWindow):
         if reply == QtGui.QMessageBox.Yes:
             gl.qtflag = False
             while gl.dcflag == True:
-                print 'gl.dcflag',gl.dcflag
                 time.sleep(1)
             event.accept()
         else:
@@ -215,12 +216,11 @@ class MainWindow(QtGui.QMainWindow):
             
  
     def update_text(self, message):
+        self.count += 1
+        if self.count >1000:
+            self.text_area.clear()
+            self.count = 0
         self.text_area.append(unicode(message, 'gbk'))
-
-##    def logout(self):
-##        print 'test'
-##        QtCore.QCoreApplication.instance().quit
-##        #QtCore.SLOT('close()')
  
 if __name__ == '__main__':
     myapp = singleinstance()

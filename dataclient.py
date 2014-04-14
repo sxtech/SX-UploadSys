@@ -27,9 +27,6 @@ def initLogging(logFilename):
                     filename = logFilename,
                     filemode = 'a');
 
-def version():
-    return 'SX-dataclient V0.4.8'
-
 class DataClient:
     def __init__(self,trigger):
         self.trigger = trigger
@@ -61,21 +58,21 @@ class DataClient:
         logging.info('dataclient quit')
         #self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime(),'System quit')) 
 
-    def setup(self):
-        try:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Start to connect mysql server '+self.imgMysql.host))
-            self.imgMysql.login()
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Connect mysql success! '+self.imgMysql.host))
-        except Exception,e:
-            now = getTime()
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
-            logging.exception(e)
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+'Reconn after 15 seconds'))
-            time.sleep(15)
-            self.setup()
-        else:
-            pass
-            logging.info('Connect mysql success!')
+##    def setup(self):
+##        try:
+##            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Start to connect mysql server '+self.imgMysql.host))
+##            self.imgMysql.login()
+##            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Connect mysql success! '+self.imgMysql.host))
+##        except Exception,e:
+##            now = getTime()
+##            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
+##            logging.exception(e)
+##            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+'Reconn after 15 seconds'))
+##            time.sleep(15)
+##            self.setup()
+##        else:
+##            pass
+##            logging.info('Connect mysql success!')
             
     def loginsql(self):
         self.imgMysql.login()
@@ -204,9 +201,8 @@ class DataClient:
                     self.setErrorFile()
             if self.imgMysql.addIndex(values) == True:
                 self.DIC_FILE[(date,hour)] = new_ini
-                carstr = '%s %s %s | %s | %s | %s车道'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),plateinfo['roadname'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
-                #print 'carstr',carstr
-                self.trigger.emit("<font %s>%s</font>"%(self.style_blue,carstr))
+                carstr = '<table><tr style="font-family:arial;font-size:14px;color:blue"><td>%s<td><td width="100">%s</td><td width="40">%s</td><td width="160">%s</td><td width="70">%s</td><td width="40">%s车道</td></tr></table>'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),plateinfo['roadname'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
+                self.trigger.emit("%s"%carstr)
                 self.setState()
             else:
                 pass
