@@ -32,6 +32,7 @@ class DataClient:
         self.trigger = trigger
         self.style_red = 'size=4 face=arial color=red'
         self.style_blue = 'size=4 face=arial color=blue'
+        self.style_gray = 'size=4 face=arial color=gray'
         self.style_green = 'size=4 face=arial color=green'
         
         #self.trigger.emit("<font %s>%s</font>"%(self.style_green,'Welcome to '+version()))
@@ -56,23 +57,6 @@ class DataClient:
     def __del__(self):
         del self.imgMysql
         logging.info('dataclient quit')
-        #self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime(),'System quit')) 
-
-##    def setup(self):
-##        try:
-##            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Start to connect mysql server '+self.imgMysql.host))
-##            self.imgMysql.login()
-##            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Connect mysql success! '+self.imgMysql.host))
-##        except Exception,e:
-##            now = getTime()
-##            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
-##            logging.exception(e)
-##            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+'Reconn after 15 seconds'))
-##            time.sleep(15)
-##            self.setup()
-##        else:
-##            pass
-##            logging.info('Connect mysql success!')
             
     def loginsql(self):
         self.imgMysql.login()
@@ -154,7 +138,6 @@ class DataClient:
                 for j in f:
                     new_ini.add(j[path_len:].decode("gbk"))
         except Exception,e:
-            #self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
             raise
         else:
             pass
@@ -176,16 +159,15 @@ class DataClient:
         ca_ini = new_ini - old_ini
 
         f_name = list(ca_ini)
-        f_name.sort()
+        #f_name.sort()
 
         values = []
         time = datetime.datetime.now()
 
-        plateinfo = {}
-        if len(f_name) != 0:
-            for i in range(len(f_name)):
+        num = len(f_name)
+        if num != 0:
+            for i in range(num):
                 try:
-                    #self.filename = f_name[i]
                     plateinfo = self.imgIni.getPlateInfo(self.path.decode("gbk")+f_name[i])
                     if plateinfo['carspeed'] > plateinfo['limitspeed']:
                         overspeed = 100.0*(plateinfo['carspeed']/plateinfo['limitspeed']-1)
@@ -201,8 +183,15 @@ class DataClient:
                     self.setErrorFile()
             if self.imgMysql.addIndex(values) == True:
                 self.DIC_FILE[(date,hour)] = new_ini
-                carstr = '<table><tr style="font-family:arial;font-size:14px;color:blue"><td>%s<td><td width="100">%s</td><td width="40">%s</td><td width="160">%s</td><td width="70">%s</td><td width="40">%s车道</td></tr></table>'%(getTime(),plateinfo['platecode'].decode("utf-8").encode("gbk"),plateinfo['platecolor'].decode("utf-8").encode("gbk"),plateinfo['roadname'].decode("utf-8").encode("gbk"),self.direction.get(plateinfo['directionid'],u'其他').encode("gbk"),plateinfo['channelid'].decode("utf-8").encode("gbk"))
-                self.trigger.emit("%s"%carstr)
+                if num >= 100:
+                    self.trigger.emit("<font %s>Upload %s history files</font>"%(self.style_gray,str(num)))
+                if num > 4:
+                    color = 'gray'
+                else:
+                    color = 'blue'
+                for i in values:
+                    carstr = '<table><tr style="font-family:arial;font-size:14px;color:%s"><td>[%s]<td><td width="100">%s</td><td width="40">%s</td><td width="160">%s</td><td width="70">%s</td><td width="40">%s车道</td></tr></table>'%(color,i[11],i[13].decode("utf-8").encode("gbk"),i[14].decode("utf-8").encode("gbk"),i[7].decode("utf-8").encode("gbk"),self.direction.get(i[26],u'其他').encode("gbk"),str(i[10]))
+                    self.trigger.emit("%s"%carstr)
                 self.setState()
             else:
                 pass
@@ -241,9 +230,9 @@ class DataClient:
         try:
             new_time = self.get_time_active_folder()
             self.add_index(self.ACTIVE_FOLDER[0],self.ACTIVE_FOLDER[1],self.ACTIVE_TIME)
-            trailing_time = self.ACTIVE_TIME+datetime.timedelta(minutes = 59)
+            trailing_time = self.ACTIVE_TIME+datetime.timedelta(minutes = 55)
             right_time    = self.ACTIVE_TIME+datetime.timedelta(minutes = 60)
-            rising_time   = self.ACTIVE_TIME+datetime.timedelta(minutes = 61)
+            rising_time   = self.ACTIVE_TIME+datetime.timedelta(minutes = 65)
             if new_time[2] > trailing_time:
                 self.add_index(new_time[0],new_time[1],datetime.datetime(new_time[2].year,new_time[2].month,new_time[2].day,new_time[2].hour,00,00))
                 if new_time[2] > rising_time:
@@ -253,8 +242,6 @@ class DataClient:
                     self.setState()
 
         except MySQLdb.Error,e:
-            #self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-            #logging.exception(e)
             raise
         except Exception,e:
             self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))

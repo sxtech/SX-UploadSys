@@ -25,7 +25,7 @@ def initLogging(logFilename):
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V0.1.5'
+    return 'SX-UploadSys V0.1.6'
 
  
 class MyThread(QtCore.QThread):
