@@ -1,256 +1,163 @@
 # -*- coding: cp936 -*-
 import time,datetime,os,glob,sys
 import MySQLdb
+import sqlite3
 import logging
 import logging.handlers
 import cPickle
 import ConfigParser
-from mysqldb import ImgMysql
-from inicof import ImgIni
+import threading
+import gl
+from sqlitedb import Sqlite
+from iniconf import ImgIni
+from helpfunc import HelpFunc
+import uploaddata
+from DBUtils.PooledDB import PooledDB
+from DBUtils.PersistentDB import PersistentDB
 #from singleinstance import singleinstance
 
 
 def getTime():
     return datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-            
-def initLogging(logFilename):
-    """Init for logging"""
-    path = os.path.split(logFilename)
-    if os.path.isdir(path[0]):
-        pass
-    else:
-        os.makedirs(path[0])
-    logging.basicConfig(
-                    level    = logging.DEBUG,
-                    format   = '%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',
-                    datefmt  = '%Y-%m-%d %H:%M:%S',
-                    filename = logFilename,
-                    filemode = 'a');
+
+#mysql线程池
+def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
+    gl.mysqlpool = PooledDB(
+        MySQLdb,
+        host    = h,
+        user    = u,
+        passwd  = ps,
+        db      = "img_center",
+        charset = "gbk",
+        mincached = minc,        #启动时开启的空连接数量
+        maxcached = maxc,        #连接池最大可用连接数量
+        maxshared = maxs,        #连接池最大可共享连接数量
+        maxconnections = maxcon, #最大允许连接数量
+        maxusage  = maxu)
+
+#sqlite线程池
+def sqlitePool(db="uploadsys.db",maxu=1000):
+    gl.sqlitepool = PersistentDB(
+        sqlite3,
+        maxusage = maxu,
+        database = db)
+
+def ipToBigint(ipaddr):
+    ipStrs = ipaddr.split(".")
+
+    return str(int(ipStrs[3]) + int(ipStrs[2])*256 + int(ipStrs[1])*256*256 + int(ipStrs[0])*256*256*256) 
+
 
 class DataClient:
-    def __init__(self,trigger):
-        self.trigger = trigger
-        self.style_red = 'size=4 face=arial color=red'
-        self.style_blue = 'size=4 face=arial color=blue'
-        self.style_gray = 'size=4 face=arial color=gray'
-        self.style_green = 'size=4 face=arial color=green'
-        
-        #self.trigger.emit("<font %s>%s</font>"%(self.style_green,'Welcome to '+version()))
-        initLogging(r'log\dataclient.log')
-        self.file_list = []
-        self.ACTIVE_FOLDER = ()
-        self.DIC_FILE = {}
-        self.ACTIVE_TIME = datetime.datetime(2000,01,01,00,00,00)
-        self.direction = {'0':u'进城','1':u'出城','2':u'由东往西','3':u'由南往北','4':u'由西往东','5':u'由北往南'}
+    #初始函数
+    def __init__(self,trigger=0):      
+        self.imgIni     = ImgIni()             #配置文件实例
+        self.imgfileini = self.imgIni.getImgFileConf()
+        self.mysqlini   = self.imgIni.getMysqldbConf()
 
-        self.imgIni = ImgIni()
-        mysqlconf = self.imgIni.getMysqldbConf()
-        imgconf = self.imgIni.getImgFileConf()
-        self.imgMysql = ImgMysql(mysqlconf['host'],mysqlconf['user'],mysqlconf['passwd'],imgconf['ip'])
-        self.path = imgconf['imgpath']
-        self.ip = imgconf['ip']
-        self.KAKOU = os.listdir(imgconf['imgpath'])
-        self.errorfile = []
-        self.filename = ''
-        self.disk_id = 1
+        self.hf = HelpFunc()               #辅助函数类实例
 
+        self.loginMysql()
+
+        #sqlitePool("uploadsys.db")
+
+        #初始化时间状态信息
+        self.sqlite = Sqlite()
+        self.sqlite.createTable()
+        state = self.sqlite.getUploadsys()
+        gl.STATE['year']  = state[1]
+        gl.STATE['month'] = state[2]
+        gl.STATE['day']   = state[3]
+        gl.STATE['hour']  = state[4]
+
+        gl.LOCALIP = self.hf.ipToBigint(self.imgfileini['ip'])
+        gl.IMGPATH = self.imgfileini['imgpath']
+        gl.KAKOU   = os.listdir(gl.IMGPATH)
+
+    #析构函数
     def __del__(self):
-        del self.imgMysql
-        logging.info('dataclient quit')
-            
-    def loginsql(self):
-        self.imgMysql.login()
-            
-    def setip(self):
-        self.imgMysql.setip()
-            
-    def set_kakou(self):
-        imgconf = self.imgIni.getImgFileConf()
-        self.KAKOU = os.listdir(imgconf['imgpath'])
-        
-    def setState(self):
-        f =file('state.data','w')
-        cPickle.dump(self.ACTIVE_FOLDER,f)
-        cPickle.dump(self.ACTIVE_TIME,f)
-        cPickle.dump(self.DIC_FILE,f)
-        f.close()
+        del self.imgIni
+        del self.sqlite
+        del self.hf
 
-    def getDiskID(self):
-        self.disk_id = self.imgMysql.getDisk()['id']
-        
-    def getState(self):
-        f =file('state.data','r')
+    #登录mysql
+    def loginMysql(self):
+        mysqlini = self.mysqlini
         try:
-            self.ACTIVE_FOLDER = cPickle.load(f)
-            self.ACTIVE_TIME   = cPickle.load(f)
-            self.DIC_FILE      = cPickle.load(f)
-        except EOFError:
-            f.close()
-
-    def builtErrorFile(self):
-        if os.path.isfile('errorfile.data') == False:
-            self.setErrorFile()
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'built errorfile'))
-            
-    def setErrorFile(self):
-        f =file('errorfile.data','w')
-        cPickle.dump(self.errorfile,f)
-        f.close()
-
-    def getErrorFile(self):
-        f =file('errorfile.data','r')
-        try:
-            self.errorfile = cPickle.load(f)
-        except EOFError:
-            f.close()
-            
-    def get_time_active_folder(self):
-        d_time = datetime.datetime.now()
-        return (d_time.strftime('%Y%m%d'),d_time.strftime('%H'),d_time)
-        
-
-    def get_last_active_file(self):
-        df = self.imgMysql.getLastDatafolder()
-        ini_set = set()
-
-        if df != None:
-            for row in self.imgMysql.getIndexByTime(df['datefolder']):
-                ini_set.add(row['inifile'])
-            date = df['datefolder'].strftime('%Y%m%d')
-            hour = df['datefolder'].strftime('%H')
-            self.ACTIVE_TIME = df['datefolder']
-        else:
-            i = datetime.datetime.now()
-            date = i.strftime('%Y%m%d')
-            hour = i.strftime('%H')
-            self.ACTIVE_TIME = datetime.datetime(i.year,i.month,i.day,i.hour,00,00)
-            
-        self.DIC_FILE[(date,hour)] = ini_set
-        self.ACTIVE_FOLDER = (date,hour)
-        self.setState()
-
-    def get_new_ini(self,date,hour):
-        new_ini = set()
-        path_len = len(self.path)
-        try:
-            for i in self.KAKOU:
-                f = glob.glob(self.path+i+os.sep+date+os.sep+hour+'\*\*.ini')
-                for j in f:
-                    new_ini.add(j[path_len:].decode("gbk"))
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,getTime()+'Start to login mysql...'))
+            mysqlPool(mysqlini['host'],mysqlini['user'],mysqlini['passwd'],3306,mysqlini['mincached'],mysqlini['maxcached'],mysqlini['maxshared'],mysqlini['maxconnections'],mysqlini['maxusage'])
+            gl.MYSQLLOGIN = True
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,getTime()+'Login mysql success!'))
+            logging.info('Login mysql success!')
         except Exception,e:
-            raise
-        else:
-            pass
-        finally:
-            return new_ini
-                
-    def add_index(self,date,hour,d_time):
-        new_ini = self.get_new_ini(date,hour)
-        old_ini = set()
-        try:
-            old_ini = self.DIC_FILE[(date,hour)]
-        except KeyError,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+'KeyError'+str(e)))
-            self.DIC_FILE[(date,hour)] = old_ini
-            self.setState()
-            for i in self.imgMysql.getInifileByTime(d_time):
-                old_ini.add(i['inifile'])
-                
-        ca_ini = new_ini - old_ini
+            gl.MYSQLLOGIN = False
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,getTime()+str(e)))
+            time.sleep(15)
+        
+    def main(self):
+        count = 0
+        hourflag = gl.STATE['hour']
+        while 1:
+            if count >20 or count == 0:
+                print "current has %d threads" % (threading.activeCount() - 2)
+                for item in threading.enumerate():
+                    print 'item',item
+                print gl.THREADDICT
+                print gl.STATE
+                count = 1
 
-        f_name = list(ca_ini)
-        #f_name.sort()
+            #退出程序
+            if gl.QTFLAG == False and gl.THREADDICT != {}:
+                gl.DCFLAG = False  #退出标记
+                break
 
-        values = []
-        time = datetime.datetime.now()
-
-        num = len(f_name)
-        if num != 0:
-            for i in range(num):
-                try:
-                    plateinfo = self.imgIni.getPlateInfo(self.path.decode("gbk")+f_name[i])
-                    if plateinfo['carspeed'] > plateinfo['limitspeed']:
-                        overspeed = 100.0*(plateinfo['carspeed']/plateinfo['limitspeed']-1)
-                    else:
-                        overspeed = 0.0
-                    imgpath = date+'\\'+hour+'\\'+plateinfo['cameraip']+'\\'+plateinfo['channelid']+'\\'+os.path.basename(f_name[i])[:17]+'.jpg'
-                    values.append((d_time,self.ip.encode("utf-8"),time,f_name[i].encode("utf-8"),self.disk_id,imgpath.encode("utf-8"),plateinfo['deviceid'],plateinfo['roadname'],plateinfo['roadid'],plateinfo['channelname'],plateinfo['channelid'],plateinfo['passdatetime'],plateinfo['datetime'],plateinfo['platecode'],plateinfo['platecolor'],plateinfo['platetype'],plateinfo['vehiclelen'],plateinfo['vehiclecolor'],plateinfo['vehiclecoltype'],plateinfo['speed'],plateinfo['carspeed'],plateinfo['limitspeed'],plateinfo['speedd'],plateinfo['speedx'],overspeed,plateinfo['cameraip'],plateinfo['directionid'],plateinfo['channeltype']))
-                except ConfigParser.NoOptionError,e:
-                    self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-                    logging.exception(e)
-                    #logging.error('filename: '+f_name[i])
-                    self.errorfile.append((f_name[i],date,hour,d_time))
-                    self.setErrorFile()
-            if self.imgMysql.addIndex(values) == True:
-                self.DIC_FILE[(date,hour)] = new_ini
-                if num >= 100:
-                    self.trigger.emit("<font %s>Upload %s history files</font>"%(self.style_gray,str(num)))
-                if num > 4:
-                    color = 'gray'
-                else:
-                    color = 'blue'
-                for i in values:
-                    carstr = '<table><tr style="font-family:arial;font-size:14px;color:%s"><td>[%s]<td><td width="100">%s</td><td width="40">%s</td><td width="160">%s</td><td width="70">%s</td><td width="40">%s车道</td></tr></table>'%(color,i[11],i[13].decode("utf-8").encode("gbk"),i[14].decode("utf-8").encode("gbk"),i[7].decode("utf-8").encode("gbk"),self.direction.get(i[26],u'其他').encode("gbk"),str(i[10]))
-                    self.trigger.emit("%s"%carstr)
-                self.setState()
-            else:
+            #如何时间记录有变化写入sqlite
+            if hourflag != gl.STATE['hour']:
+                self.sqlite.updateUploadsys(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
+            
+            if gl.MYSQLLOGIN:
+                s = self.getUploadTime(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
+                if s != None:
+                    # 处理线程
+                    try:
+                        gl.THREADDICT[(s[0].year,s[0].month,s[0].day,s[1])] = datetime.datetime.now()
+                        t = uploaddata.UploadData(datetime.date(s[0].year,s[0].month,s[0].day),s[1])
+                        t.setDaemon(False)
+                        t.start()
+                    except:
+                        pass
+            elif gl.THREADDICT != {}:
                 pass
+            else:
+                self.loginMysql()
+            count +=1
 
-    def setActiveTime(self):
-        self.imgMysql.setActiveTime(datetime.datetime.now())
-
-    def appendIndex(self):
-        values = []
-        time = datetime.datetime.now()
-        for filename in self.errorfile:
-            try:
-                plateinfo = self.imgIni.getPlateInfo(self.path.decode("gbk")+filename[0])
-                if plateinfo['carspeed'] > plateinfo['limitspeed']:
-                    overspeed = 100.0*(plateinfo['carspeed']/plateinfo['limitspeed']-1)
-                else:
-                    overspeed = 0.0
-                imgpath = filename[1]+'\\'+filename[2]+'\\'+plateinfo['cameraip']+'\\'+plateinfo['channelid']+'\\'+os.path.basename(filename[0])[:17]+'.jpg'
-                values.append((filename[3],self.ip.encode("utf-8"),time,filename[0].encode("utf-8"),self.disk_id,imgpath.encode("utf-8"),plateinfo['deviceid'],plateinfo['roadname'],plateinfo['roadid'],plateinfo['channelname'],plateinfo['channelid'],plateinfo['passdatetime'],plateinfo['datetime'],plateinfo['platecode'],plateinfo['platecolor'],plateinfo['platetype'],plateinfo['vehiclelen'],plateinfo['vehiclecolor'],plateinfo['vehiclecoltype'],plateinfo['speed'],plateinfo['carspeed'],plateinfo['limitspeed'],plateinfo['speedd'],plateinfo['speedx'],overspeed,plateinfo['cameraip'],plateinfo['directionid'],plateinfo['channeltype']))
-                
-            except ConfigParser.NoOptionError,e:
-                #print getTime(),e
-                self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-                self.trigger.emit("<font %s>%s</font>"%(self.style_red,'failfile: '+filename[0]))
-            except Exception,e:
-                #print getTime(),e
-                self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-                self.trigger.emit("<font %s>%s</font>"%(self.style_red,'failfile: '+filename[0]))
-                
-        if self.imgMysql.addIndex(values) == True:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Update missed %d files'%len(self.errorfile)))
-        self.errorfile = []
-        self.setErrorFile()
-
-    def cmp_active_folder(self):
-        try:
-            new_time = self.get_time_active_folder()
-            self.add_index(self.ACTIVE_FOLDER[0],self.ACTIVE_FOLDER[1],self.ACTIVE_TIME)
-            trailing_time = self.ACTIVE_TIME+datetime.timedelta(minutes = 55)
-            right_time    = self.ACTIVE_TIME+datetime.timedelta(minutes = 60)
-            rising_time   = self.ACTIVE_TIME+datetime.timedelta(minutes = 65)
-            if new_time[2] > trailing_time:
-                self.add_index(new_time[0],new_time[1],datetime.datetime(new_time[2].year,new_time[2].month,new_time[2].day,new_time[2].hour,00,00))
-                if new_time[2] > rising_time:
-                    del self.DIC_FILE[(self.ACTIVE_FOLDER[0],self.ACTIVE_FOLDER[1])]
-                    self.ACTIVE_FOLDER = (right_time.strftime('%Y%m%d'),right_time.strftime('%H'))
-                    self.ACTIVE_TIME = right_time
-                    self.setState()
-
-        except MySQLdb.Error,e:
-            raise
-        except Exception,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-            logging.exception(e)
             time.sleep(1)
+            
+        gl.DCFLAG = False  #退出标记
 
-    def setFlagTime(self):
-        try:
-            self.imgMysql.setFlagTime()
-        except Exception,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
+    #根据时间获取时间标记以创建线程
+    def getUploadTime(self,year,month,day,hour):
+        now   = datetime.datetime.now()                 #当前时间
+        after = now + datetime.timedelta(minutes = 5)   #5分钟后时间
+        
+        if gl.THREADDICT.get((now.year,now.month,now.day,now.hour),-1)==-1:
+            return datetime.date(now.year,now.month,now.day),now.hour
+        elif after.hour != now.hour and gl.THREADDICT.get((after.year,after.month,after.day,after.hour),-1)==-1:
+            return datetime.date(after.year,after.month,after.day),after.hour
+        elif gl.THREADDICT.get((year,month,day,hour),-1)==-1:
+            return datetime.date(year,month,day),hour
+        else:
+            return None
 
+            
+if __name__ == "__main__":
+    try:
+        dc = DataClient()
+        dc.main()
+
+        
+    except MySQLdb.Error,e:
+        print e
+    else:
+        pass

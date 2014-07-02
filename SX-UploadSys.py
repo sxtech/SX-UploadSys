@@ -4,6 +4,7 @@ import sys,time,datetime,os
 import MySQLdb
 import logging
 import logging.handlers
+#from helpfunc import HelpFunc
 from singleinstance import singleinstance
 import gl
 
@@ -18,14 +19,14 @@ def initLogging(logFilename):
     else:
         os.makedirs(path[0])
     logging.basicConfig(
-                    level    = logging.DEBUG,
+                    level    = logging.WARNING,
                     format   = '%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',
                     datefmt  = '%Y-%m-%d %H:%M:%S',
                     filename = logFilename,
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V0.1.6'
+    return 'SX-UploadSys V1.0.2'
 
  
 class MyThread(QtCore.QThread):
@@ -35,129 +36,23 @@ class MyThread(QtCore.QThread):
         super(MyThread, self).__init__(parent)
  
     def run(self):
-        #mainloop(self.trigger)
+        gl.TRIGGER = self.trigger
         m = dcmain(self.trigger)
         m.mainloop()
 
 class dcmain:
     def __init__(self,trigger):
-        self.style_red = 'size=4 face=arial color=red'
-        self.style_blue = 'size=4 face=arial color=blue'
-        self.style_green = 'size=4 face=arial color=green'
-        self.trigger = trigger
-        initLogging(r'log\dataclient.log')
-        self.dc = DataClient(trigger)
-        self.count = 0
-        self.loginflag = True
-        self.logincount = 0
-        self.setupflag = False
 
-        self.trigger.emit("<font %s>%s</font>"%(self.style_green,'Welcome to '+version()))
+        initLogging(r'log\uploadsys.log')
 
+        gl.TRIGGER.emit("<font size=6 font-weight=bold face=arial color=tomato>%s</font>"%('Welcome to use '+version()))
+        self.dc = DataClient()
 
     def __del__(self):
         del self.dc
 
-    def loginSQL(self):
-        now = getTime()
-        try:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,now+'Start to connect mysql server '))
-            self.dc.loginsql()
-            self.trigger.emit("<font %s>%s</font>"%(self.style_green,now+'Connect mysql success! '))
-        except MySQLdb.Error,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+'Reconn after 15 seconds'))
-            logging.exception(e)
-            self.loginflag = True
-            self.logincount = 1
-        except Exception,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
-            logging.exception(e)
-        else:
-            self.loginflag = False
-            self.logincount = 0
-##        finally:
-##            self.checkFlag()
-
-    def comLoop(self):
-        #print 'loop'
-        try:   
-            if len(self.dc.errorfile) > 0:
-                self.dc.appendIndex()
-            self.dc.cmp_active_folder()
-            
-            if self.count%40 == 0:
-                self.dc.setActiveTime()
-            if self.count >=120:
-                self.count = 0
-                self.dc.set_kakou()
-                self.dc.getDiskID()
-                self.trigger.emit("<font %s>%s</font>"%(self.style_green,getTime()+'Activing folder %s/%s'%(self.dc.ACTIVE_FOLDER[0],self.dc.ACTIVE_FOLDER[1])))
-                #self.count = 0
-        except MySQLdb.Error,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-            logging.exception(e)
-            self.loginflag = True
-            self.logincount = 1
-        except Exception,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,now+str(e)))
-            logging.exception(e)
-        finally:
-            self.count += 1
-            time.sleep(0.25)
-            #self.checkFlag()
-        
-    def setup(self):
-        #print 'setup'
-        try:
-            self.dc.setip()
-            self.dc.getDiskID()
-            try:
-                self.dc.getState()
-            except IOError,e:
-                print e
-                if e[0]==2:
-                    self.dc.get_last_active_file()
-            self.dc.builtErrorFile()
-            self.dc.getErrorFile()
-        except MySQLdb.Error,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-            logging.exception(e)
-            self.loginflag = True
-            self.logincount = 1
-            #self.checkFlag()
-        except Exception,e:
-            self.trigger.emit("<font %s>%s</font>"%(self.style_red,getTime()+str(e)))
-            logging.exception(e)
-            #self.checkFlag()
-        else:
-            self.setupflag = True
-        #finally:
-            #self.comLoop()
-
-    def mainloop(self):                    
-        while True:
-            #print 'count ',self.count
-            if gl.qtflag == False:
-                gl.dcflag = False
-                break
-            
-            if self.loginflag == True:
-                if self.logincount==0:
-                    self.loginSQL()
-                elif self.logincount<=15:
-                    self.logincount += 1
-                    time.sleep(1)
-                    #self.checkFlag()
-                else:
-                    self.logincount = 0
-                    #self.checkFlag()
-            else:
-                #print 'self.setupflag',self.setupflag
-                if self.setupflag:
-                    self.comLoop()
-                else:
-                    self.setup()
+    def mainloop(self):
+        self.dc.main()
     
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):  
@@ -200,8 +95,8 @@ class MainWindow(QtGui.QMainWindow):
             "Are you sure to quit?", QtGui.QMessageBox.Yes |
             QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if reply == QtGui.QMessageBox.Yes:
-            gl.qtflag = False
-            while gl.dcflag == True:
+            gl.QTFLAG = False
+            while gl.DCFLAG == True:
                 time.sleep(1)
             event.accept()
         else:
@@ -209,11 +104,10 @@ class MainWindow(QtGui.QMainWindow):
             
     def start_threads(self):
         self.threads = []              # this will keep a reference to threads
-        thread = MyThread(self)    # create a thread
+        thread = MyThread(self)        # create a thread
         thread.trigger.connect(self.update_text)  # connect to it's signal
-        thread.start()             # start the thread
-        self.threads.append(thread) # keep a reference
-            
+        thread.start()                 # start the thread
+        self.threads.append(thread)    # keep a reference         
  
     def update_text(self, message):
         self.count += 1

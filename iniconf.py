@@ -1,0 +1,135 @@
+#-*- encoding: gb2312 -*-
+import ConfigParser
+import string, os, sys
+import datetime
+import time
+
+
+class ImgIni:
+    def __init__(self,confpath = 'uploadsys.conf'):
+        self.path = ''
+        self.confpath = confpath
+        self.cf = ConfigParser.ConfigParser()
+        self.cf.read(self.confpath)
+        
+##    def str2time(self,timestr):
+##        t = time.strptime(timestr,'%Y-%m-%d %H:%M:%S')
+##        return datetime.datetime(*t[:6])
+
+##    def getPlateInfo(self,inipath):
+##        self.cf.read(inipath)
+##        plateinfo = {}
+##        plateinfo['deviceid']       = self.cf.get('PLATEINFO','DeviceID')
+##        plateinfo['roadname']       = self.cf.get('PLATEINFO','RoadName')
+##        plateinfo['roadid']         = self.cf.get('PLATEINFO','RoadID')
+##        plateinfo['channelname']    = self.cf.get('PLATEINFO','ChannelName')
+##        plateinfo['channelid']      = self.cf.get('PLATEINFO','ChannelID')
+##        plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime'))
+##        plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime'))
+##        plateinfo['platecode']      = self.cf.get('PLATEINFO','PlateCode')
+##        plateinfo['platecolor']     = self.cf.get('PLATEINFO','PlateColor')
+##        plateinfo['platetype']      = self.cf.get('PLATEINFO','PlateType')
+##        plateinfo['vehiclelen']     = self.cf.get('PLATEINFO','VehicleLen')
+##        plateinfo['vehiclecolor']   = self.cf.get('PLATEINFO','VehicleColor')
+##        plateinfo['vehiclecoltype'] = self.cf.get('PLATEINFO','VehicleColType')
+##        plateinfo['speed']          = self.cf.getint('PLATEINFO','Speed')
+##        plateinfo['carspeed']       = self.cf.getint('PLATEINFO','CarSpeed')
+##        plateinfo['limitspeed']     = self.cf.getint('PLATEINFO','LimitSpeed')
+##        plateinfo['speedd']         = self.cf.getint('PLATEINFO','SpeedD')
+##        plateinfo['speedx']         = self.cf.getint('PLATEINFO','SpeedX')
+##        plateinfo['cameraip']       = self.cf.get('PLATEINFO','CameraIP')
+##        plateinfo['directionid']    = self.cf.get('PLATEINFO','DirectionId')
+##        plateinfo['channeltype']    = self.cf.get('PLATEINFO','ChannelType')
+##        return plateinfo
+    
+    def getImgFileConf(self):
+        imgfile = {}
+        imgfile['imgpath'] = self.cf.get('IMGFILE','imgpath')
+        imgfile['ip'] = self.cf.get('IMGFILE','ip')
+        return imgfile
+
+    def getMysqldbConf(self):
+        mysqlconf = {}
+        
+        mysqlconf['host']   = self.cf.get('MYSQLDB','host')
+        mysqlconf['user']   = self.cf.get('MYSQLDB','user')
+        mysqlconf['passwd'] = self.cf.get('MYSQLDB','passwd')
+        mysqlconf['port']   = self.cf.getint('MYSQLDB','port')
+        
+        mysqlconf['mincached']      = self.cf.getint('MYSQLDB','mincached')
+        mysqlconf['maxcached']      = self.cf.getint('MYSQLDB','maxcached')
+        mysqlconf['maxshared']      = self.cf.getint('MYSQLDB','maxshared')
+        mysqlconf['maxconnections'] = self.cf.getint('MYSQLDB','maxconnections')
+        mysqlconf['maxusage']       = self.cf.getint('MYSQLDB','maxusage')
+        
+        return mysqlconf
+
+    def getStateConf(self):
+        sttefile = {}
+        sttefile['year']  = self.cf.getint('STATE','year')
+        sttefile['month'] = self.cf.getint('STATE','month')
+        sttefile['day']   = self.cf.getint('STATE','day')
+        sttefile['hour']  = self.cf.getint('STATE','hour')
+        return sttefile
+
+    def setStateConf(self,year,month,day,hour):
+        self.cf.set('STATE', 'year', year)
+        self.cf.set('STATE', 'month', month)
+        self.cf.set('STATE', 'day', day)
+        self.cf.set('STATE', 'hour', hour)
+        fh = open('uploadsys.conf', 'w')
+        self.cf.write(fh)
+        fh.close()
+
+
+class PlateIni:
+    def __init__(self,confpath = 'uploadsys.conf'):
+        self.path = ''
+        self.confpath = confpath
+        self.cf = ConfigParser.ConfigParser()
+        self.cf.read(self.confpath)
+
+    def str2time(self,timestr):
+        t = time.strptime(timestr,'%Y-%m-%d %H:%M:%S')
+        return datetime.datetime(*t[:6])
+        
+    def getPlateInfo(self,inipath):
+        self.cf.read(inipath)
+        plateinfo = {}
+        plateinfo['deviceid']       = self.cf.get('PLATEINFO','DeviceID')
+        plateinfo['roadname']       = self.cf.get('PLATEINFO','RoadName')
+        plateinfo['roadid']         = self.cf.get('PLATEINFO','RoadID')
+        plateinfo['channelname']    = self.cf.get('PLATEINFO','ChannelName')
+        plateinfo['channelid']      = self.cf.get('PLATEINFO','ChannelID')
+        plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime'))
+        plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime'))
+        plateinfo['platecode']      = self.cf.get('PLATEINFO','PlateCode')
+        plateinfo['platecolor']     = self.cf.get('PLATEINFO','PlateColor')
+        plateinfo['platetype']      = self.cf.get('PLATEINFO','PlateType')
+        plateinfo['vehiclelen']     = self.cf.get('PLATEINFO','VehicleLen')
+        plateinfo['vehiclecolor']   = self.cf.get('PLATEINFO','VehicleColor')
+        plateinfo['vehiclecoltype'] = self.cf.get('PLATEINFO','VehicleColType')
+        plateinfo['speed']          = self.cf.getint('PLATEINFO','Speed')
+        plateinfo['carspeed']       = self.cf.getint('PLATEINFO','CarSpeed')
+        plateinfo['limitspeed']     = self.cf.getint('PLATEINFO','LimitSpeed')
+        plateinfo['speedd']         = self.cf.getint('PLATEINFO','SpeedD')
+        plateinfo['speedx']         = self.cf.getint('PLATEINFO','SpeedX')
+        plateinfo['cameraip']       = self.cf.get('PLATEINFO','CameraIP')
+        plateinfo['directionid']    = self.cf.get('PLATEINFO','DirectionId')
+        plateinfo['channeltype']    = self.cf.get('PLATEINFO','ChannelType')
+        return plateinfo
+
+
+if __name__ == "__main__":
+    #PATH = 'F:/¿¨¿Ú/imgs/ImageFile/Æ½Ì¶ÎÚÌÁ¿¨¿Ú/20140304/11/1(³ö³Ç)/20140113164737680_À¶ÅÆÔÁB9041J.ini'
+    #PATH2 = r'F:\\¿¨¿Ú\\imgs\\ImageFile\\²âÊÔ¿¨¿Ú\1(³ö³Ç)\20140113164737680_À¶ÅÆÔÁB9041J.ini'
+    #PATH3 = 'F:\¿¨¿Ú\imgs\ImageFile\Æ½Ì¶ÎÚÌÁ¿¨¿Ú\20140304\11\test\20140113164940250_À¶ÅÆÔÁLF2473.ini'
+
+
+    imgIni = ImgIni()
+    imgIni.setStateConf(2014,4,12,13)
+
+    time.sleep(30)
+
+
+
