@@ -11,36 +11,6 @@ class ImgIni:
         self.confpath = confpath
         self.cf = ConfigParser.ConfigParser()
         self.cf.read(self.confpath)
-        
-##    def str2time(self,timestr):
-##        t = time.strptime(timestr,'%Y-%m-%d %H:%M:%S')
-##        return datetime.datetime(*t[:6])
-
-##    def getPlateInfo(self,inipath):
-##        self.cf.read(inipath)
-##        plateinfo = {}
-##        plateinfo['deviceid']       = self.cf.get('PLATEINFO','DeviceID')
-##        plateinfo['roadname']       = self.cf.get('PLATEINFO','RoadName')
-##        plateinfo['roadid']         = self.cf.get('PLATEINFO','RoadID')
-##        plateinfo['channelname']    = self.cf.get('PLATEINFO','ChannelName')
-##        plateinfo['channelid']      = self.cf.get('PLATEINFO','ChannelID')
-##        plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime'))
-##        plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime'))
-##        plateinfo['platecode']      = self.cf.get('PLATEINFO','PlateCode')
-##        plateinfo['platecolor']     = self.cf.get('PLATEINFO','PlateColor')
-##        plateinfo['platetype']      = self.cf.get('PLATEINFO','PlateType')
-##        plateinfo['vehiclelen']     = self.cf.get('PLATEINFO','VehicleLen')
-##        plateinfo['vehiclecolor']   = self.cf.get('PLATEINFO','VehicleColor')
-##        plateinfo['vehiclecoltype'] = self.cf.get('PLATEINFO','VehicleColType')
-##        plateinfo['speed']          = self.cf.getint('PLATEINFO','Speed')
-##        plateinfo['carspeed']       = self.cf.getint('PLATEINFO','CarSpeed')
-##        plateinfo['limitspeed']     = self.cf.getint('PLATEINFO','LimitSpeed')
-##        plateinfo['speedd']         = self.cf.getint('PLATEINFO','SpeedD')
-##        plateinfo['speedx']         = self.cf.getint('PLATEINFO','SpeedX')
-##        plateinfo['cameraip']       = self.cf.get('PLATEINFO','CameraIP')
-##        plateinfo['directionid']    = self.cf.get('PLATEINFO','DirectionId')
-##        plateinfo['channeltype']    = self.cf.get('PLATEINFO','ChannelType')
-##        return plateinfo
     
     def getImgFileConf(self):
         imgfile = {}
@@ -70,6 +40,7 @@ class ImgIni:
         sttefile['month'] = self.cf.getint('STATE','month')
         sttefile['day']   = self.cf.getint('STATE','day')
         sttefile['hour']  = self.cf.getint('STATE','hour')
+        
         return sttefile
 
     def setStateConf(self,year,month,day,hour):
@@ -101,8 +72,8 @@ class PlateIni:
         plateinfo['roadid']         = self.cf.get('PLATEINFO','RoadID')
         plateinfo['channelname']    = self.cf.get('PLATEINFO','ChannelName')
         plateinfo['channelid']      = self.cf.get('PLATEINFO','ChannelID')
-        plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime'))
-        plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime'))
+        plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime')[:19])
+        plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime')[:19])
         plateinfo['platecode']      = self.cf.get('PLATEINFO','PlateCode')
         plateinfo['platecolor']     = self.cf.get('PLATEINFO','PlateColor')
         plateinfo['platetype']      = self.cf.get('PLATEINFO','PlateType')

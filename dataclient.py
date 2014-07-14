@@ -16,10 +16,6 @@ from DBUtils.PooledDB import PooledDB
 from DBUtils.PersistentDB import PersistentDB
 #from singleinstance import singleinstance
 
-
-def getTime():
-    return datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-
 #mysql线程池
 def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
     gl.mysqlpool = PooledDB(
@@ -35,18 +31,6 @@ def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
         maxconnections = maxcon, #最大允许连接数量
         maxusage  = maxu)
 
-#sqlite线程池
-def sqlitePool(db="uploadsys.db",maxu=1000):
-    gl.sqlitepool = PersistentDB(
-        sqlite3,
-        maxusage = maxu,
-        database = db)
-
-def ipToBigint(ipaddr):
-    ipStrs = ipaddr.split(".")
-
-    return str(int(ipStrs[3]) + int(ipStrs[2])*256 + int(ipStrs[1])*256*256 + int(ipStrs[0])*256*256*256) 
-
 
 class DataClient:
     #初始函数
@@ -59,7 +43,7 @@ class DataClient:
 
         self.loginMysql()
 
-        #sqlitePool("uploadsys.db")
+        self.loginCount=0          #登录记数器
 
         #初始化时间状态信息
         self.sqlite = Sqlite()
@@ -69,6 +53,7 @@ class DataClient:
         gl.STATE['month'] = state[2]
         gl.STATE['day']   = state[3]
         gl.STATE['hour']  = state[4]
+        gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour']))
 
         gl.LOCALIP = self.hf.ipToBigint(self.imgfileini['ip'])
         gl.IMGPATH = self.imgfileini['imgpath']
@@ -84,15 +69,16 @@ class DataClient:
     def loginMysql(self):
         mysqlini = self.mysqlini
         try:
-            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,getTime()+'Start to login mysql...'))
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,self.hf.getTime()+'Start to login mysql...'))
             mysqlPool(mysqlini['host'],mysqlini['user'],mysqlini['passwd'],3306,mysqlini['mincached'],mysqlini['maxcached'],mysqlini['maxshared'],mysqlini['maxconnections'],mysqlini['maxusage'])
             gl.MYSQLLOGIN = True
-            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,getTime()+'Login mysql success!'))
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,self.hf.getTime()+'Login mysql success!'))
             logging.info('Login mysql success!')
+            self.loginCount = 0
         except Exception,e:
             gl.MYSQLLOGIN = False
-            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,getTime()+str(e)))
-            time.sleep(15)
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
+            self.loginCount = 1
         
     def main(self):
         count = 0
@@ -106,17 +92,23 @@ class DataClient:
                 print gl.STATE
                 count = 1
 
-            #退出程序
-            if gl.QTFLAG == False and gl.THREADDICT != {}:
-                gl.DCFLAG = False  #退出标记
-                break
-
             #如何时间记录有变化写入sqlite
             if hourflag != gl.STATE['hour']:
                 self.sqlite.updateUploadsys(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
-            
-            if gl.MYSQLLOGIN:
+                gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour']))
+
+            if gl.QTFLAG == False:    
+                if gl.THREADDICT == {}:
+                    gl.DCFLAG = False  #退出标记
+                    break
+            elif self.loginCount > 0:
+                if self.loginCount >= 15:
+                    self.loginMysql()
+                else:
+                    self.loginCount += 1
+            elif gl.MYSQLLOGIN:
                 s = self.getUploadTime(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
+                #print 'self.getUploadTime',s
                 if s != None:
                     # 处理线程
                     try:
@@ -129,7 +121,7 @@ class DataClient:
             elif gl.THREADDICT != {}:
                 pass
             else:
-                self.loginMysql()
+                self.loginCount+=1
             count +=1
 
             time.sleep(1)
@@ -145,7 +137,7 @@ class DataClient:
             return datetime.date(now.year,now.month,now.day),now.hour
         elif after.hour != now.hour and gl.THREADDICT.get((after.year,after.month,after.day,after.hour),-1)==-1:
             return datetime.date(after.year,after.month,after.day),after.hour
-        elif gl.THREADDICT.get((year,month,day,hour),-1)==-1:
+        elif datetime.datetime(year,month,day,hour)<now and gl.THREADDICT.get((year,month,day,hour),-1)==-1:
             return datetime.date(year,month,day),hour
         else:
             return None
