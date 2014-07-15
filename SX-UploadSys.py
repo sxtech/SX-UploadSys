@@ -26,7 +26,7 @@ def initLogging(logFilename):
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V1.0.2'
+    return 'SX-UploadSys V1.0.4'
 
  
 class MyThread(QtCore.QThread):
@@ -46,6 +46,7 @@ class dcmain:
         initLogging(r'log\uploadsys.log')
 
         gl.TRIGGER.emit("<font size=6 font-weight=bold face=arial color=tomato>%s</font>"%('Welcome to use '+version()))
+
         self.dc = DataClient()
 
     def __del__(self):
@@ -61,9 +62,11 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle(version())
         
         self.text_area = QtGui.QTextBrowser()
+        self.title = QtGui.QLabel('#None'.decode('gbk'))
  
         central_widget = QtGui.QWidget()
-        central_layout = QtGui.QHBoxLayout()
+        central_layout = QtGui.QVBoxLayout()
+        central_layout.addWidget(self.title)
         central_layout.addWidget(self.text_area)
         central_widget.setLayout(central_layout)
         self.setCentralWidget(central_widget)
@@ -114,7 +117,10 @@ class MainWindow(QtGui.QMainWindow):
         if self.count >1000:
             self.text_area.clear()
             self.count = 0
-        self.text_area.append(unicode(message, 'gbk'))
+        if message[:1] == '#':
+            self.title.setText(unicode(message[1:], 'gbk'))
+        else:
+            self.text_area.append(unicode(message, 'gbk'))
  
 if __name__ == '__main__':
     myapp = singleinstance()
