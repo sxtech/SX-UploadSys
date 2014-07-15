@@ -41,7 +41,7 @@ class UploadData(threading.Thread):
             
             self.strdate = date.strftime('%Y%m%d')   #字符串日期
             self.date    = date                      #日期
-            self.hour    = hour                       #小时
+            self.hour    = hour                      #小时
             threadname   = self.strdate+self.hour_dict.get(hour,'00')
             threading.Thread.__init__(self,name=threadname)
 
@@ -57,17 +57,15 @@ class UploadData(threading.Thread):
             self.ip_dict  = {}                        #IP字典
             
         except Exception,e:
-            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-            logging.error(str(e))
+            print e
 
     def run(self):
         try:
             self.getHistoryData()
 
-            while 1:
-                #print self.getName()
-                #print gl.QTFLAG
-                
+            while True:
+                print self.getName()
+                self.mysql.getVersion()
                 difset = self.getNewData() - self.imgset
                 
                 #先添加报错的车辆信息集合
@@ -83,23 +81,27 @@ class UploadData(threading.Thread):
                     
                 #超过当前时间5分钟的时候退出
                 if datetime.datetime.now() > self.endtime and self.faultset==set():
-                    self.timeStep()
                     break
 
-                if gl.MYSQLLOGIN == False:
-                    break
                 #退出标记
                 if gl.QTFLAG == False:
                     break
                 
                 time.sleep(1)
-
         except MySQLdb.Error,e:
             if gl.MYSQLLOGIN:
                 gl.MYSQLLOGIN = False
                 logging.error(str(e))
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-
+        else:
+            if self.date.year == gl.STATE['year'] and self.date.month == gl.STATE['month'] and self.date.day == gl.STATE['day'] and self.hour == gl.STATE['hour']:
+                nexttime = datetime.datetime(self.date.year,self.date.month,self.date.day,self.hour) + datetime.timedelta(hours = 1)
+                gl.STATE['year']  = nexttime.year
+                gl.STATE['month'] = nexttime.month
+                gl.STATE['day']   = nexttime.day
+                gl.STATE['hour']  = nexttime.hour
+                #self.sqlite.updateUploadsys(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
+            time.sleep(1)
         finally:
             try:
                 logging.info('退出线程'+self.getName())
@@ -111,17 +113,8 @@ class UploadData(threading.Thread):
                 del self.hf
                 del gl.THREADDICT[(self.date.year,self.date.month,self.date.day,self.hour)]
             except Exception,e:
-                logging.error(str(e))
-                gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-
-    def timeStep(self):
-        if self.date.year == gl.STATE['year'] and self.date.month == gl.STATE['month'] and self.date.day == gl.STATE['day'] and self.hour == gl.STATE['hour']:
-            nexttime = datetime.datetime(self.date.year,self.date.month,self.date.day,self.hour) + datetime.timedelta(hours = 1)
-            gl.STATE['year']  = nexttime.year
-            gl.STATE['month'] = nexttime.month
-            gl.STATE['day']   = nexttime.day
-            gl.STATE['hour']  = nexttime.hour
-    
+                print e
+        
     #获取历史车辆信息
     def getHistoryData(self):
         imgfile = self.mysql.getImgfileByTime(str(self.date),self.hour,gl.LOCALIP)
@@ -131,20 +124,17 @@ class UploadData(threading.Thread):
     #获取最新车辆信息
     def getNewData(self):
         data_set = set()
-        length = len(gl.IMGPATH)
         try:
             for i in gl.KAKOU:
-                path = os.path.join(gl.IMGPATH,i,self.strdate,self.hour_dict.get(self.hour,'00'),'*\*.ini')
+                path = os.path.join(gl.IMGPATH,i,self.strdate,self.hour_dict.get(self.hour,'00'))
                 try:
-                    f = glob.glob(path)
-                    
+                    os.chdir(path)
+                    f = glob.glob('*\*.ini')
                     for j in f:
-                        data_set.add(j[length:])
+                        data_set.add(os.path.join(i,self.strdate,self.hour_dict.get(self.hour,'00'),j))
                 except Exception,e:
-                    logging.error(str(e))
                     pass
         except Exception,e:
-            logging.error(str(e))
             raise
         finally:
             return data_set
@@ -175,8 +165,7 @@ class UploadData(threading.Thread):
                                plateinfo['vehiclecoltype'],plateinfo['speed'],plateinfo['carspeed'],plateinfo['limitspeed'],
                                plateinfo['speedd'],plateinfo['speedx'],overspeed,cip,plateinfo['directionid'],plateinfo['channeltype']))
             except ConfigParser.Error,e:
-                gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-                logging.error(str(e))
+                print e
                 self.faultset.add(i)
         self.mysql.addIndex(values)
         self.showPlateInfo(values)
