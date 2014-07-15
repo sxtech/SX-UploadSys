@@ -8,7 +8,7 @@ import logging.handlers
 import os,datetime,time,sys
 import ConfigParser
 from iniconf import ImgIni,PlateIni
-from mysqldb import ImgMysql
+from mysqldb import UMysql
 from helpfunc import HelpFunc
 
 def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
@@ -34,14 +34,14 @@ class UploadData(threading.Thread):
                          8:'08',9:'09',10:'10',11:'11',12:'12',13:'13',14:'14',15:'15',
                          16:'16',17:'17',18:'18',19:'19',20:'20',21:'21',22:'22',23:'23'}
 
-            self.mysql   = ImgMysql()                #mysql操作类实例
+            self.mysql   = UMysql()                #mysql操作类实例
             self.plaIni  = PlateIni()                #车辆信息配置文件
             self.imgIni  = ImgIni()                  #配置文件类实例
             self.hf      = HelpFunc()                #辅助函数类实例
             
             self.strdate = date.strftime('%Y%m%d')   #字符串日期
             self.date    = date                      #日期
-            self.hour    = hour                       #小时
+            self.hour    = hour                      #小时
             threadname   = self.strdate+self.hour_dict.get(hour,'00')
             threading.Thread.__init__(self,name=threadname)
 
@@ -65,9 +65,6 @@ class UploadData(threading.Thread):
             self.getHistoryData()
 
             while 1:
-                #print self.getName()
-                #print gl.QTFLAG
-                
                 difset = self.getNewData() - self.imgset
                 
                 #先添加报错的车辆信息集合
@@ -85,15 +82,16 @@ class UploadData(threading.Thread):
                 if datetime.datetime.now() > self.endtime and self.faultset==set():
                     self.timeStep()
                     break
-
+                
+                #数据库退出标记
                 if gl.MYSQLLOGIN == False:
                     break
+                
                 #退出标记
                 if gl.QTFLAG == False:
                     break
                 
                 time.sleep(1)
-
         except MySQLdb.Error,e:
             if gl.MYSQLLOGIN:
                 gl.MYSQLLOGIN = False
@@ -114,6 +112,7 @@ class UploadData(threading.Thread):
                 logging.error(str(e))
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
 
+    #时间步伐
     def timeStep(self):
         if self.date.year == gl.STATE['year'] and self.date.month == gl.STATE['month'] and self.date.day == gl.STATE['day'] and self.hour == gl.STATE['hour']:
             nexttime = datetime.datetime(self.date.year,self.date.month,self.date.day,self.hour) + datetime.timedelta(hours = 1)
@@ -121,7 +120,7 @@ class UploadData(threading.Thread):
             gl.STATE['month'] = nexttime.month
             gl.STATE['day']   = nexttime.day
             gl.STATE['hour']  = nexttime.hour
-    
+            
     #获取历史车辆信息
     def getHistoryData(self):
         imgfile = self.mysql.getImgfileByTime(str(self.date),self.hour,gl.LOCALIP)
@@ -137,7 +136,6 @@ class UploadData(threading.Thread):
                 path = os.path.join(gl.IMGPATH,i,self.strdate,self.hour_dict.get(self.hour,'00'),'*\*.ini')
                 try:
                     f = glob.glob(path)
-                    
                     for j in f:
                         data_set.add(j[length:])
                 except Exception,e:

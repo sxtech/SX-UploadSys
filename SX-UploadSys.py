@@ -26,7 +26,7 @@ def initLogging(logFilename):
                     filemode = 'a');
 
 def version():
-    return 'SX-UploadSys V1.0.4'
+    return 'SX-UploadSys V1.0.5'
 
  
 class MyThread(QtCore.QThread):
@@ -46,7 +46,6 @@ class dcmain:
         initLogging(r'log\uploadsys.log')
 
         gl.TRIGGER.emit("<font size=6 font-weight=bold face=arial color=tomato>%s</font>"%('Welcome to use '+version()))
-
         self.dc = DataClient()
 
     def __del__(self):

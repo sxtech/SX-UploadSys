@@ -24,7 +24,7 @@ def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
         maxconnections = maxcon, #最大允许连接数量
         maxusage = maxu)
 
-class ImgMysql:
+class UMysql:
     def __init__(self):
         #print '12345'
         self.conn  = gl.mysqlpool.connection()

@@ -16,6 +16,7 @@ from DBUtils.PooledDB import PooledDB
 from DBUtils.PersistentDB import PersistentDB
 #from singleinstance import singleinstance
 
+
 #mysql线程池
 def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
     gl.mysqlpool = PooledDB(
@@ -43,7 +44,7 @@ class DataClient:
 
         self.loginMysql()
 
-        self.loginCount=0          #登录记数器
+        self.loginCount=0 
 
         #初始化时间状态信息
         self.sqlite = Sqlite()
@@ -78,19 +79,25 @@ class DataClient:
         except Exception,e:
             gl.MYSQLLOGIN = False
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
+            time.sleep(15)
             self.loginCount = 1
         
     def main(self):
-        count = 0
+        #count = 0
         hourflag = gl.STATE['hour']
         while 1:
-            if count >20 or count == 0:
-                print "current has %d threads" % (threading.activeCount() - 2)
-                for item in threading.enumerate():
-                    print 'item',item
-                print gl.THREADDICT
-                print gl.STATE
-                count = 1
+##            if count >20 or count == 0:
+##                print "current has %d threads" % (threading.activeCount() - 2)
+##                for item in threading.enumerate():
+##                    print 'item',item
+##                print gl.THREADDICT
+##                print gl.STATE
+##                count = 1
+
+            #退出程序
+            if gl.QTFLAG == False and gl.THREADDICT != {}:
+                gl.DCFLAG = False  #退出标记
+                break
 
             #如何时间记录有变化写入sqlite
             if hourflag != gl.STATE['hour']:
@@ -99,7 +106,7 @@ class DataClient:
 
             if gl.QTFLAG == False:    
                 if gl.THREADDICT == {}:
-                    gl.DCFLAG = False  #退出标记
+                    gl.DCFLAG = False  #退出标识
                     break
             elif self.loginCount > 0:
                 if self.loginCount >= 15:
@@ -108,7 +115,6 @@ class DataClient:
                     self.loginCount += 1
             elif gl.MYSQLLOGIN:
                 s = self.getUploadTime(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
-                #print 'self.getUploadTime',s
                 if s != None:
                     # 处理线程
                     try:
@@ -122,7 +128,7 @@ class DataClient:
                 pass
             else:
                 self.loginCount+=1
-            count +=1
+            #count +=1
 
             time.sleep(1)
             

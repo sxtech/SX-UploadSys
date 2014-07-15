@@ -40,7 +40,6 @@ class ImgIni:
         sttefile['month'] = self.cf.getint('STATE','month')
         sttefile['day']   = self.cf.getint('STATE','day')
         sttefile['hour']  = self.cf.getint('STATE','hour')
-        
         return sttefile
 
     def setStateConf(self,year,month,day,hour):
