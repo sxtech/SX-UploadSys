@@ -10,7 +10,7 @@ import gl
 
 def getTime():
     return datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-            
+    
 def initLogging(logFilename):
     """Init for logging"""
     path = os.path.split(logFilename)
@@ -18,15 +18,16 @@ def initLogging(logFilename):
         pass
     else:
         os.makedirs(path[0])
-    logging.basicConfig(
-                    level    = logging.WARNING,
-                    format   = '%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',
-                    datefmt  = '%Y-%m-%d %H:%M:%S',
-                    filename = logFilename,
-                    filemode = 'a');
+    logger = logging.getLogger('root')
+    
+    Rthandler = logging.handlers.RotatingFileHandler(logFilename, maxBytes=10*1024*1024,backupCount=5)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s')
+    Rthandler.setFormatter(formatter)
+    logger.addHandler(Rthandler)
 
 def version():
-    return 'SX-UploadSys V1.0.5'
+    return 'SX-UploadSys V1.1.0'
 
  
 class MyThread(QtCore.QThread):

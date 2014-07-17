@@ -4,12 +4,13 @@ import gl
 import glob
 import MySQLdb
 import logging
-import logging.handlers
 import os,datetime,time,sys
 import ConfigParser
 from iniconf import ImgIni,PlateIni
 from mysqldb import UMysql
 from helpfunc import HelpFunc
+
+logger = logging.getLogger('root')
 
 def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
     gl.mysqlpool = PooledDB(
@@ -45,7 +46,7 @@ class UploadData(threading.Thread):
             threadname   = self.strdate+self.hour_dict.get(hour,'00')
             threading.Thread.__init__(self,name=threadname)
 
-            logging.info('开始线程'+self.getName())
+            logger.info('开始线程'+self.getName())
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_royalblue,self.hf.getTime()+'开始线程'+self.getName()))
 
             gl.THREADDICT[(self.date.year,self.date.month,self.date.day,self.hour)]=datetime.datetime.now()
@@ -55,10 +56,13 @@ class UploadData(threading.Thread):
             self.imgset   = set()                     #ini文件路径集合
             self.faultset = set()                     #ini错误文件集合
             self.ip_dict  = {}                        #IP字典
+
+            gl.KAKOU = os.listdir(gl.IMGPATH) #卡口名称列表
+            self.length = len(gl.IMGPATH)     #图片路径长度
             
         except Exception,e:
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-            logging.error(str(e))
+            logger.error(str(e))
 
     def run(self):
         try:
@@ -95,12 +99,14 @@ class UploadData(threading.Thread):
         except MySQLdb.Error,e:
             if gl.MYSQLLOGIN:
                 gl.MYSQLLOGIN = False
-                logging.error(str(e))
+                logger.error(str(e))
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-
+        except Exception,e:
+            logger.error(str(e))
+            gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
         finally:
             try:
-                logging.info('退出线程'+self.getName())
+                logger.info('退出线程'+self.getName())
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_brown,self.hf.getTime()+'退出线程'+self.getName()))
 
                 del self.mysql
@@ -109,9 +115,8 @@ class UploadData(threading.Thread):
                 del self.hf
                 del gl.THREADDICT[(self.date.year,self.date.month,self.date.day,self.hour)]
             except Exception,e:
-                logging.error(str(e))
+                logger.error(str(e))
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-
     #时间步伐
     def timeStep(self):
         if self.date.year == gl.STATE['year'] and self.date.month == gl.STATE['month'] and self.date.day == gl.STATE['day'] and self.hour == gl.STATE['hour']:
@@ -123,29 +128,23 @@ class UploadData(threading.Thread):
             
     #获取历史车辆信息
     def getHistoryData(self):
-        imgfile = self.mysql.getImgfileByTime(str(self.date),self.hour,gl.LOCALIP)
-        for i in imgfile:
+        imgf = self.mysql.getImgfileByTime(str(self.date),self.hour,gl.LOCALIP)
+        for i in imgf:
             self.imgset.add(i['imgfile'].encode(gl.CHARSET)[:-4]+'.ini')
 
     #获取最新车辆信息
     def getNewData(self):
-        data_set = set()
-        length = len(gl.IMGPATH)
-        try:
-            for i in gl.KAKOU:
+        data_set = set() #新的数据集合
+        for i in gl.KAKOU:
+            try:
                 path = os.path.join(gl.IMGPATH,i,self.strdate,self.hour_dict.get(self.hour,'00'),'*\*.ini')
-                try:
-                    f = glob.glob(path)
-                    for j in f:
-                        data_set.add(j[length:])
-                except Exception,e:
-                    logging.error(str(e))
-                    pass
-        except Exception,e:
-            logging.error(str(e))
-            raise
-        finally:
-            return data_set
+                f = glob.glob(path)
+                for j in f:
+                    data_set.add(j[self.length:])
+            except Exception,e:
+                logger.error(str(e))
+
+        return data_set
 
     #添加新的车辆消息到数据库
     def addIndex(self,_set):
@@ -174,7 +173,7 @@ class UploadData(threading.Thread):
                                plateinfo['speedd'],plateinfo['speedx'],overspeed,cip,plateinfo['directionid'],plateinfo['channeltype']))
             except ConfigParser.Error,e:
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-                logging.error(str(e))
+                logger.error(str(e))
                 self.faultset.add(i)
         self.mysql.addIndex(values)
         self.showPlateInfo(values)
@@ -182,9 +181,11 @@ class UploadData(threading.Thread):
     #显示车辆信息
     def showPlateInfo(self,values):
         if datetime.datetime.now() > self.endtime:
-            gl.TRIGGER.emit("<font %s>Upload %s history files</font>"%(gl.style_gray,len(values)))
+            logger.debug('Upload %s history files from %s'%(str(len(values)),self.getName()))
+            gl.TRIGGER.emit("<font %s>%sUpload %s history files from %s</font>"%(gl.style_gray,self.hf.getTime(),len(values),self.getName()))
         else:
             for i in values:
+                logger.debug(self.getName()+i[13])
                 carstr = '<table><tr style="font-family:arial;font-size:14px;color:blue"><td>[%s]<td><td width="100">%s</td><td width="40">%s</td><td width="160">%s</td><td width="70">%s</td><td width="40">%s车道</td></tr></table>'%(i[11],i[13],i[14],i[7],self.direction.get(i[26],'其他'),str(i[10]))
                 gl.TRIGGER.emit("%s"%carstr)
                     

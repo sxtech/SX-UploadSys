@@ -16,6 +16,7 @@ from DBUtils.PooledDB import PooledDB
 from DBUtils.PersistentDB import PersistentDB
 #from singleinstance import singleinstance
 
+logger = logging.getLogger('root')
 
 #mysql线程池
 def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
@@ -35,7 +36,8 @@ def mysqlPool(h,u,ps,pt,minc=5,maxc=20,maxs=10,maxcon=100,maxu=1000):
 
 class DataClient:
     #初始函数
-    def __init__(self,trigger=0):      
+    def __init__(self,trigger=0):
+        logger.info('Logon System!')
         self.imgIni     = ImgIni()             #配置文件实例
         self.imgfileini = self.imgIni.getImgFileConf()
         self.mysqlini   = self.imgIni.getMysqldbConf()
@@ -74,25 +76,18 @@ class DataClient:
             mysqlPool(mysqlini['host'],mysqlini['user'],mysqlini['passwd'],3306,mysqlini['mincached'],mysqlini['maxcached'],mysqlini['maxshared'],mysqlini['maxconnections'],mysqlini['maxusage'])
             gl.MYSQLLOGIN = True
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,self.hf.getTime()+'Login mysql success!'))
-            logging.info('Login mysql success!')
+            logger.info('Login mysql success!')
             self.loginCount = 0
         except Exception,e:
             gl.MYSQLLOGIN = False
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-            time.sleep(15)
+            #time.sleep(15)
             self.loginCount = 1
         
     def main(self):
         #count = 0
         hourflag = gl.STATE['hour']
         while 1:
-##            if count >20 or count == 0:
-##                print "current has %d threads" % (threading.activeCount() - 2)
-##                for item in threading.enumerate():
-##                    print 'item',item
-##                print gl.THREADDICT
-##                print gl.STATE
-##                count = 1
 
             #退出程序
             if gl.QTFLAG == False and gl.THREADDICT != {}:
@@ -128,10 +123,10 @@ class DataClient:
                 pass
             else:
                 self.loginCount+=1
-            #count +=1
 
             time.sleep(1)
             
+        logger.warning('Logout System!')
         gl.DCFLAG = False  #退出标记
 
     #根据时间获取时间标记以创建线程

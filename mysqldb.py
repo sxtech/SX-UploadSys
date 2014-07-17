@@ -29,7 +29,7 @@ class UMysql:
         #print '12345'
         self.conn  = gl.mysqlpool.connection()
         self.cur   = self.conn.cursor(cursorclass = MySQLdb.cursors.DictCursor)
-        self.table = 'indexcenter8'
+        self.table = 'indexcenter'
         
     def __del__(self):
         try:
@@ -168,7 +168,7 @@ class UMysql:
 
     def addIndex(self,values):
         try:
-            self.cur.executemany('insert into indexcenter8(datefolder,hour,pcip,captime,imgfile,imgpath,deviceid,roadname,roadid,channelname,channelid,passdatetime,datetime,platecode,platecolor,platetype,vehiclelen,vehiclecolor,vehiclecoltype,speed,carspeed,limitspeed,speedd,speedx,overspeed,cameraip,directionid,channeltype) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', values)
+            self.cur.executemany('insert into indexcenter(datefolder,hour,pcip,captime,imgfile,imgpath,deviceid,roadname,roadid,channelname,channelid,passdatetime,datetime,platecode,platecolor,platetype,vehiclelen,vehiclecolor,vehiclecoltype,speed,carspeed,limitspeed,speedd,speedx,overspeed,cameraip,directionid,channeltype) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', values)
         except MySQLdb.Error,e:
             raise
             self.conn.rollback()
@@ -303,7 +303,7 @@ class UMysql:
 
     def test(self):
         try:
-            self.cur.execute("select * from indexcenter8 where id = 1")
+            self.cur.execute("select * from indexcenter where id = 1")
             s = self.cur.fetchall()
         except MySQLdb.Error,e:
             raise
