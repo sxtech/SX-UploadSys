@@ -35,7 +35,7 @@ class UploadData(threading.Thread):
                          8:'08',9:'09',10:'10',11:'11',12:'12',13:'13',14:'14',15:'15',
                          16:'16',17:'17',18:'18',19:'19',20:'20',21:'21',22:'22',23:'23'}
 
-            self.mysql   = UMysql()                #mysql操作类实例
+            self.mysql   = UMysql()                  #mysql操作类实例
             self.plaIni  = PlateIni()                #车辆信息配置文件
             self.imgIni  = ImgIni()                  #配置文件类实例
             self.hf      = HelpFunc()                #辅助函数类实例
@@ -173,6 +173,7 @@ class UploadData(threading.Thread):
                                plateinfo['speedd'],plateinfo['speedx'],overspeed,cip,plateinfo['directionid'],plateinfo['channeltype']))
             except ConfigParser.Error,e:
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
+                logger.error(i)
                 logger.error(str(e))
                 self.faultset.add(i)
         self.mysql.addIndex(values)
