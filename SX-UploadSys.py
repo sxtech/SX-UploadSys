@@ -1,3 +1,4 @@
+# -*- coding: cp936 -*-
 from dataclient import DataClient
 from PyQt4 import QtGui, QtCore
 import sys,time,datetime,os
@@ -22,12 +23,12 @@ def initLogging(logFilename):
     
     Rthandler = logging.handlers.RotatingFileHandler(logFilename, maxBytes=10*1024*1024,backupCount=5)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
     Rthandler.setFormatter(formatter)
     logger.addHandler(Rthandler)
 
 def version():
-    return 'SX-UploadSys V1.1.1'
+    return 'SX-UploadSys V1.2.0'
 
  
 class MyThread(QtCore.QThread):
@@ -74,7 +75,7 @@ class MainWindow(QtGui.QMainWindow):
         exit = QtGui.QAction(QtGui.QIcon('icons/exit.png'), 'Exit', self)
         exit.setShortcut('Ctrl+Q')
         exit.setStatusTip('Exit application')
-        self.connect(exit, QtCore.SIGNAL('triggered()'), QtCore.SLOT('close()'))
+        self.connect(exit, QtCore.SIGNAL('triggered()'), self.closeGUI)
 
         self.statusBar()
 
@@ -90,20 +91,65 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon('icons/logo.png'))
 
         self.count = 0
+
+        self.createActions()
+        self.createTray()
         
         self.start_threads()
         
     def closeEvent(self, event):
+        event.ignore()
+        self.hide()
+
+    #创建托盘菜单动作
+    def createActions(self):    
+        self.restoreAction = QtGui.QAction(u"显示|隐藏", self)
+        self.connect(self.restoreAction, QtCore.SIGNAL('triggered()'), self.show_hide)
+        
+        self.quitAction = QtGui.QAction(QtGui.QIcon( 'icons/exit.png' ), u'退出', self)
+        self.connect(self.quitAction, QtCore.SIGNAL('triggered()'), self.logout)
+
+    #创建系统托盘
+    def createTray(self):
+        # 创建托盘
+        self.icon = QtGui.QIcon("icons\logo.png")
+         
+        self.trayIcon = QtGui.QSystemTrayIcon(self)
+        self.trayIcon.setIcon(self.icon)
+        self.trayIcon.show()
+
+        # 托盘菜单
+        self.menu = QtGui.QMenu(self)
+        self.menu.addAction(self.restoreAction)
+        self.menu.addSeparator()
+        self.menu.addAction(self.quitAction)
+        self.trayIcon.setContextMenu(self.menu)
+
+    def show_hide(self):
+        if self.isHidden():
+            self.showNormal()
+        else:
+            self.hide()
+            
+    #托盘菜单退出
+    def logout(self):
+        gl.QTFLAG = False
+        while gl.DCFLAG == True:
+            time.sleep(1)
+        sys.exit()
+
+    #退出GUI
+    def closeGUI(self):
         reply = QtGui.QMessageBox.question(self, 'Message',
-            "Are you sure to quit?", QtGui.QMessageBox.Yes |
+            u"确定要退出吗?", QtGui.QMessageBox.Yes |
             QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if reply == QtGui.QMessageBox.Yes:
             gl.QTFLAG = False
             while gl.DCFLAG == True:
                 time.sleep(1)
-            event.accept()
+            sys.exit()
         else:
-            event.ignore()
+            pass
             
     def start_threads(self):
         self.threads = []              # this will keep a reference to threads
