@@ -6,8 +6,8 @@ import MySQLdb
 import logging
 import os,datetime,time,sys
 import ConfigParser
-from iniconf import ImgIni,PlateIni
-from mysqldb import UMysql
+from iniconf import Img_Ini,PlateIni
+from mysqldb import U_Mysql
 from helpfunc import HelpFunc
 
 logger = logging.getLogger('root')
@@ -35,9 +35,9 @@ class UploadData(threading.Thread):
                          8:'08',9:'09',10:'10',11:'11',12:'12',13:'13',14:'14',15:'15',
                          16:'16',17:'17',18:'18',19:'19',20:'20',21:'21',22:'22',23:'23'}
 
-            self.mysql   = UMysql()                  #mysql操作类实例
+            self.mysql   = U_Mysql()                  #mysql操作类实例
             self.plaIni  = PlateIni()                #车辆信息配置文件
-            self.imgIni  = ImgIni()                  #配置文件类实例
+            self.imgIni  = Img_Ini()                  #配置文件类实例
             self.hf      = HelpFunc()                #辅助函数类实例
             
             self.strdate = date.strftime('%Y%m%d')   #字符串日期
@@ -119,12 +119,12 @@ class UploadData(threading.Thread):
                 gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
     #时间步伐
     def timeStep(self):
-        if self.date.year == gl.STATE['year'] and self.date.month == gl.STATE['month'] and self.date.day == gl.STATE['day'] and self.hour == gl.STATE['hour']:
+        if self.date.year == gl.STATED['year'] and self.date.month == gl.STATED['month'] and self.date.day == gl.STATED['day'] and self.hour == gl.STATED['hour']:
             nexttime = datetime.datetime(self.date.year,self.date.month,self.date.day,self.hour) + datetime.timedelta(hours = 1)
-            gl.STATE['year']  = nexttime.year
-            gl.STATE['month'] = nexttime.month
-            gl.STATE['day']   = nexttime.day
-            gl.STATE['hour']  = nexttime.hour
+            gl.STATED['year']  = nexttime.year
+            gl.STATED['month'] = nexttime.month
+            gl.STATED['day']   = nexttime.day
+            gl.STATED['hour']  = nexttime.hour
             
     #获取历史车辆信息
     def getHistoryData(self):

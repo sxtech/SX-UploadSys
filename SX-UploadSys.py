@@ -5,13 +5,10 @@ import sys,time,datetime,os
 import MySQLdb
 import logging
 import logging.handlers
-#from helpfunc import HelpFunc
 from singleinstance import singleinstance
 import gl
 
-def getTime():
-    return datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-    
+
 def initLogging(logFilename):
     """Init for logging"""
     path = os.path.split(logFilename)
@@ -23,12 +20,13 @@ def initLogging(logFilename):
     
     Rthandler = logging.handlers.RotatingFileHandler(logFilename, maxBytes=10*1024*1024,backupCount=5)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] [%(levelname)s] %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
     Rthandler.setFormatter(formatter)
     logger.addHandler(Rthandler)
 
 def version():
-    return 'SX-UploadSys V1.2.0'
+    return 'SX-UploadSys V1.2.1'
 
  
 class MyThread(QtCore.QThread):
@@ -41,6 +39,7 @@ class MyThread(QtCore.QThread):
         gl.TRIGGER = self.trigger
         m = dcmain(self.trigger)
         m.mainloop()
+        del m
 
 class dcmain:
     def __init__(self,trigger):

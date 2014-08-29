@@ -5,7 +5,7 @@ import datetime
 import time
 
 
-class ImgIni:
+class Img_Ini:
     def __init__(self,confpath = 'uploadsys.conf'):
         self.path = ''
         self.confpath = confpath

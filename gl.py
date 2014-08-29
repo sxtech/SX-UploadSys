@@ -16,7 +16,7 @@ LOCALIP = 0
 #线程字典
 THREADDICT ={}
 #系统处理时间标记
-STATE = {'year':2014,'month':4,'day':4,'hour':0}
+STATED = {'year':2014,'month':4,'day':4,'hour':0}
 #mysql登录标记
 MYSQLLOGIN = False
 #QT打印触发

@@ -9,7 +9,7 @@ def sqlitePool(db="uploadsys.db",maxu=1000):
         maxusage = maxu,
         database = db)
     
-class Sqlite:
+class U_Sqlite:
     def __init__(self):
         #self.conn = gl.sqlitepool.connection(check_same_thread = False)
         #self.cur  = self.conn.cursor()

@@ -8,8 +8,8 @@ import cPickle
 import ConfigParser
 import threading
 import gl
-from sqlitedb import Sqlite
-from iniconf import ImgIni
+from sqlitedb import U_Sqlite
+from iniconf import Img_Ini
 from helpfunc import HelpFunc
 import uploaddata
 from DBUtils.PooledDB import PooledDB
@@ -38,7 +38,7 @@ class DataClient:
     #初始函数
     def __init__(self,trigger=0):
         logger.info('Logon System!')
-        self.imgIni     = ImgIni()             #配置文件实例
+        self.imgIni     = Img_Ini()             #配置文件实例
         self.imgfileini = self.imgIni.getImgFileConf()
         self.mysqlini   = self.imgIni.getMysqldbConf()
 
@@ -49,14 +49,15 @@ class DataClient:
         self.loginCount=0 
 
         #初始化时间状态信息
-        self.sqlite = Sqlite()
+        self.sqlite = U_Sqlite()
         self.sqlite.createTable()
-        state = self.sqlite.getUploadsys()
-        gl.STATE['year']  = state[1]
-        gl.STATE['month'] = state[2]
-        gl.STATE['day']   = state[3]
-        gl.STATE['hour']  = state[4]
-        gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour']))
+        s = self.sqlite.getUploadsys()
+        
+        gl.STATED['year']  = s[1]
+        gl.STATED['month'] = s[2]
+        gl.STATED['day']   = s[3]
+        gl.STATED['hour']  = s[4]
+        gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATED['year'],gl.STATED['month'],gl.STATED['day'],gl.STATED['hour']))
 
         gl.LOCALIP = self.hf.ipToBigint(self.imgfileini['ip'])
         gl.IMGPATH = self.imgfileini['imgpath']
@@ -81,12 +82,11 @@ class DataClient:
         except Exception,e:
             gl.MYSQLLOGIN = False
             gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+str(e)))
-            #time.sleep(15)
             self.loginCount = 1
         
     def main(self):
         #count = 0
-        hourflag = gl.STATE['hour']
+        hourflag = gl.STATED['hour']
         while 1:
 
             #退出程序
@@ -95,9 +95,9 @@ class DataClient:
                 break
 
             #如何时间记录有变化写入sqlite
-            if hourflag != gl.STATE['hour']:
-                self.sqlite.updateUploadsys(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
-                gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour']))
+            if hourflag != gl.STATED['hour']:
+                self.sqlite.updateUploadsys(gl.STATED['year'],gl.STATED['month'],gl.STATED['day'],gl.STATED['hour'])
+                gl.TRIGGER.emit("#%s年%s月%s日%s时"%(gl.STATED['year'],gl.STATED['month'],gl.STATED['day'],gl.STATED['hour']))
 
             if gl.QTFLAG == False:    
                 if gl.THREADDICT == {}:
@@ -109,7 +109,7 @@ class DataClient:
                 else:
                     self.loginCount += 1
             elif gl.MYSQLLOGIN:
-                s = self.getUploadTime(gl.STATE['year'],gl.STATE['month'],gl.STATE['day'],gl.STATE['hour'])
+                s = self.getUploadTime(gl.STATED['year'],gl.STATED['month'],gl.STATED['day'],gl.STATED['hour'])
                 if s != None:
                     # 处理线程
                     try:
