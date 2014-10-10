@@ -11,6 +11,9 @@ import gl
 from sqlitedb import U_Sqlite
 from iniconf import Img_Ini
 from helpfunc import HelpFunc
+from disk import DiskState
+from ntp import NtpClient
+import pythoncom
 import uploaddata
 from DBUtils.PooledDB import PooledDB
 from DBUtils.PersistentDB import PersistentDB
@@ -41,12 +44,18 @@ class DataClient:
         self.imgIni     = Img_Ini()             #配置文件实例
         self.imgfileini = self.imgIni.getImgFileConf()
         self.mysqlini   = self.imgIni.getMysqldbConf()
+        self.ntpini     = self.imgIni.getNTP()
 
+        self.ntpip = self.ntpini['ip']    #ntp服务IP
+        
         self.hf = HelpFunc()               #辅助函数类实例
 
         self.loginMysql()
 
-        self.loginCount=0 
+        self.loginCount=0
+        
+        pythoncom.CoInitialize() #解决wmi报错
+        self.dis = DiskState()
 
         #初始化时间状态信息
         self.sqlite = U_Sqlite()
@@ -85,10 +94,12 @@ class DataClient:
             self.loginCount = 1
         
     def main(self):
-        #count = 0
         hourflag = gl.STATED['hour']
+        n = threading.Thread(target=self.ntpThread)
+        n.start()
         while 1:
-
+            #print self.dis.getSize()
+            
             #退出程序
             if gl.QTFLAG == False and gl.THREADDICT != {}:
                 gl.DCFLAG = False  #退出标记
@@ -124,10 +135,34 @@ class DataClient:
             else:
                 self.loginCount+=1
 
-            time.sleep(1)
+            time.sleep(5)
             
         logger.warning('Logout System!')
         gl.DCFLAG = False  #退出标记
+
+    #ntp时间同步线程
+    def ntpThread(self):
+        ntp = NtpClient(self.ntpip)
+        count = 2*60*60
+        while 1:
+            try:
+                #退出程序
+                if gl.QTFLAG == False:
+                    gl.DCFLAG = False  #退出标记
+                    break
+                
+                if count >= 2*60*60:
+                    ts = ntp.setTime()
+                    gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_green,self.hf.getTime()+'时钟在%s与%s同步成功'%(time.strftime('%Y-%m-%d %X', time.localtime(ts)),self.ntpip)))
+                    count = 0
+                else:
+                    count += 1
+            except Exception,e:
+                logger.error(str(e))
+                gl.TRIGGER.emit("<font %s>%s</font>"%(gl.style_red,self.hf.getTime()+'系统在与%s进行同步出错'%self.ntpip))
+                count = 0
+            time.sleep(1)
+        del ntp
 
     #根据时间获取时间标记以创建线程
     def getUploadTime(self,year,month,day,hour):

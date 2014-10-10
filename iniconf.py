@@ -42,6 +42,12 @@ class Img_Ini:
         sttefile['hour']  = self.cf.getint('STATE','hour')
         return sttefile
 
+    #获取NTP配置
+    def getNTP(self):
+        ntp = {}
+        ntp['ip']  = self.cf.get('NTP','ip')
+        return ntp
+
     def setStateConf(self,year,month,day,hour):
         self.cf.set('STATE', 'year', year)
         self.cf.set('STATE', 'month', month)
@@ -73,6 +79,7 @@ class PlateIni:
         plateinfo['channelid']      = self.cf.get('PLATEINFO','ChannelID')
         plateinfo['passdatetime']   = self.str2time(self.cf.get('PLATEINFO','PassDateTime')[:19])
         plateinfo['datetime']       = self.str2time(self.cf.get('PLATEINFO','DateTime')[:19])
+        plateinfo['strtime']       = self.cf.get('PLATEINFO','PassDateTime')[:19]
         plateinfo['platecode']      = self.cf.get('PLATEINFO','PlateCode')
         plateinfo['platecolor']     = self.cf.get('PLATEINFO','PlateColor')
         plateinfo['platetype']      = self.cf.get('PLATEINFO','PlateType')
@@ -91,15 +98,21 @@ class PlateIni:
 
 
 if __name__ == "__main__":
-    #PATH = 'F:/卡口/imgs/ImageFile/平潭乌塘卡口/20140304/11/1(出城)/20140113164737680_蓝牌粤B9041J.ini'
+    PATH = 'F:/卡口/imgs/ImageFile/平潭乌塘卡口/20140304/11/1(出城)/20140113164737680_蓝牌粤B9041J.ini'
     #PATH2 = r'F:\\卡口\\imgs\\ImageFile\\测试卡口\1(出城)\20140113164737680_蓝牌粤B9041J.ini'
-    #PATH3 = 'F:\卡口\imgs\ImageFile\平潭乌塘卡口\20140304\11\test\20140113164940250_蓝牌粤LF2473.ini'
+    PATH3 = 'F:\卡口\imgs\ImageFile\平潭乌塘卡口\20140304\11\test\20140113164940250_蓝牌粤LF2473.ini'
 
-
-    imgIni = ImgIni()
-    imgIni.setStateConf(2014,4,12,13)
-
-    time.sleep(30)
+    import json
+    imgIni = PlateIni()
+    data = imgIni.getPlateInfo(PATH)
+    print data
+    s = json.dumps(data.decode('gbk'))
+    print s
+    a = json.loads(s)
+    print a
+    #s = str(imgIni.getPlateInfo(PATH))
+    #print (d1,1)
+    #time.sleep(30)
 
 
 

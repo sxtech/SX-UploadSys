@@ -26,7 +26,7 @@ def initLogging(logFilename):
     logger.addHandler(Rthandler)
 
 def version():
-    return 'SX-UploadSys V1.2.1'
+    return 'SX-UploadSys V1.3.0'
 
  
 class MyThread(QtCore.QThread):

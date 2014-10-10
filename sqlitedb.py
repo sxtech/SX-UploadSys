@@ -57,7 +57,14 @@ class U_Sqlite:
             self.cur.execute("update uploadsys set year=%s, month=%s, day=%s, hour=%s where id=1"%(year,month,day,hour))
             self.conn.commit()
         except sqlite3.Error as e:
-            print e
+            raise
+
+    #更新数据上传状态记录
+    def addPlateInfo(self,values):
+        try:
+            self.cur.executemany("insert into plateinfo(passtime)values(%s)"%values)
+            self.conn.commit()
+        except sqlite3.Error as e:
             raise
         
     def endOfCur(self):
@@ -73,10 +80,10 @@ if __name__ == "__main__":
     from DBUtils.PersistentDB import PersistentDB
     import gl
     #sqlitePool()
-    sl = Sqlite()
+    sl = U_Sqlite()
     #print sl.test()
     #print sl.getUploadsys()
-    sl.updateUploadsys(2014,1,15,12)
+    sl.addPlateInfo(['1','2'])
     #print s
 
     #sl.createTable_imgdownload()

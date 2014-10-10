@@ -25,6 +25,11 @@ class HelpFunc:
         
         return "%d.%d.%d.%d"%(first,second,third,fourth)
 
+    #×Ö·û×ª»»Ê±¼ä
+    def str2time(self,timestr):
+        t = time.strptime(timestr,'%Y-%m-%d %H:%M:%S')
+        return datetime.datetime(*t[:6])
+
 if __name__ == '__main__':
     hf = HelpFunc()
     print hf.getTime()
